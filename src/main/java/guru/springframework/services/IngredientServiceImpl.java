@@ -7,6 +7,7 @@ import guru.springframework.domain.Ingredient;
 import guru.springframework.domain.Recipe;
 import guru.springframework.repositories.RecipeRepository;
 import guru.springframework.repositories.UnitOfMeasureRepository;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +19,7 @@ import java.util.Optional;
  */
 @Slf4j
 @Service
+@AllArgsConstructor
 public class IngredientServiceImpl implements IngredientService {
 
     private final IngredientToIngredientCommand ingredientToIngredientCommand;
@@ -25,14 +27,6 @@ public class IngredientServiceImpl implements IngredientService {
     private final RecipeRepository recipeRepository;
     private final UnitOfMeasureRepository unitOfMeasureRepository;
 
-    public IngredientServiceImpl(IngredientToIngredientCommand ingredientToIngredientCommand,
-                                 IngredientCommandToIngredient ingredientCommandToIngredient,
-                                 RecipeRepository recipeRepository, UnitOfMeasureRepository unitOfMeasureRepository) {
-        this.ingredientToIngredientCommand = ingredientToIngredientCommand;
-        this.ingredientCommandToIngredient = ingredientCommandToIngredient;
-        this.recipeRepository = recipeRepository;
-        this.unitOfMeasureRepository = unitOfMeasureRepository;
-    }
 
     @Override
     public IngredientCommand findByRecipeIdAndIngredientId(Long recipeId, Long ingredientId) {
@@ -112,4 +106,24 @@ public class IngredientServiceImpl implements IngredientService {
         }
 
     }
+
+	@Override
+	public void deleteById(Long recipeId, Long idToDelete) {
+		Optional<Recipe> recipeOpt = recipeRepository.findById(recipeId);
+		
+		if(recipeOpt.isPresent()) {
+			Recipe recipe = recipeOpt.get();
+			Optional<Ingredient> ingredientOpt = recipe.getIngredients().stream()
+													.filter(ingredient -> ingredient.getId().equals(idToDelete))
+													.findFirst();
+			if(ingredientOpt.isPresent()) {
+				Ingredient ingredient = ingredientOpt.get();
+				//hibernate deletes it from db
+				//alternative: ingredientRepository.deleteById(idToDelete);
+				ingredient.setRecipe(null);
+				recipe.getIngredients().remove(ingredient);
+				recipeRepository.save(recipe);
+			}
+		}
+	}
 }
